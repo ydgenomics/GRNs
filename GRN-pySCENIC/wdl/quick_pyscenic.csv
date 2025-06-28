@@ -1,0 +1,2 @@
+EntityID,scenic_loom,tf_txt,tbl_file,feather_file
+yd_test,/Files/yangdong/pySCENIC/scenic.loom,/Files/yangdong/pySCENIC/NB20250525080807qmkcrf01/TF_gene_maped.txt,/Files/yangdong/pySCENIC/NB20250525080807qmkcrf01/TF_motifs_many2many.tbl,/Files/yangdong/pySCENIC/NB20250525080807qmkcrf01/peanut.regions_vs_motifs.rankings.feather
