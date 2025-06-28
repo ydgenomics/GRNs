@@ -1,0 +1,26 @@
+# Here you can overwrite any property set in the data.config file. It shall not be
+# be overwritten in any case, so if you are experiencing problems rename or remove this
+# file. See data.config for how the file should be formatted.
+
+# Template to add a genomic section.
+#[self_defined]
+#genome: undefined
+#chromosome_sizes: undefined
+#gene_regions: undefined
+#annotation: undefined
+#gene_alias: undefined
+
+[ga]
+genome: ga/genome_ga.fa
+chromosome_sizes: ga/chrom.sizes.ga
+gene_regions: ga/genes_ga.bed
+annotation: ga/ga.gtf
+gene_alias: ga/alias_ga.txt
+
+# Here you can change your motif database preset. Use the parameter --filter
+# in the 'rgt-motifanalysis matching' tool to subset only certain species, 
+# for specific experiments.
+# Uncomment the following section and modify the list at will.
+#[MotifData]
+#repositories: jaspar_vertebrates, jaspar_plants, jaspar_insects
+
