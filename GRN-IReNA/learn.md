@@ -161,3 +161,5 @@ make install
 export PATH=$HOME/meme/bin:$HOME/meme/libexec/meme-5.5.8:$PATH
 export PATH=$PATH:~/meme/bin
 ```
+
+[【FDU生统实践课-3】单细胞ATAC-seq全分析流程 30分钟入门](https://www.bilibili.com/video/BV1Be4y127Ho/?spm_id_from=333.337.search-card.all.click&vd_source=5600c17ea3ce6334fe6d9c0d3cd99627)
