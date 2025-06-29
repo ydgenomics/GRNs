@@ -6,9 +6,6 @@
 source /opt/software/miniconda3/bin/activate
 conda create -n IReNA r-base=4.3 -y
 conda activate IReNA
-conda install bioconda::bioconductor-annotationdbi -y
-conda install bioconda::bioconductor-genie3 -y
-
 conda install bioconda::bioconductor-rsamtools -y
 conda install bioconda::bioconductor-chipseeker -y
 conda install bioconda::bioconductor-monocle -y
@@ -21,9 +18,12 @@ conda install conda-forge::r-pbapply -y
 conda install conda-forge::r-rocr -y
 conda install conda-forge::r-seurat -y # 5.3
 conda install bioconda::bioconductor-edger -y
-conda install bioconda::bioconductor-edger -y
 conda install conda-forge::r-furrr -y
 conda install conda-forge::r-future -y
+Rscript -e 'devtools::install_github("jiang-junyao/IReNA")'
+conda install bioconda::bioconductor-annotationdbi -y
+conda install bioconda::bioconductor-genie3 -y
+conda install conda-forge::r-doparallel -y
 ```
 
 ```R
@@ -63,6 +63,8 @@ library(purrr)
 
 [pp.bulkATAC](https://jiang-junyao.github.io/IReNA/ATAC-seq-preprocessing)
 ```shell
+conda create -n htseq -y
+conda activate htseq
 conda install bioconda::htseq -y
 ```
 [pp.scRNAseq](https://jiang-junyao.github.io/IReNA/scRNA-seq-preprocessing)
@@ -90,6 +92,10 @@ bowtie2 --version
 conda create -n samtools -y
 conda activate samtools
 conda install bioconda::samtools -y
+
+conda create -n bedtools -y
+conda activate bedtools
+conda install bioconda::bedtools -y
 
 conda create -n macs3 -y
 conda activate macs3
@@ -151,7 +157,7 @@ conda install bioconda::bioconductor-txdbmaker -y
 ```shell
 # sudo cp /data/work/SCPipelines/meme-5.5.8.tar.gz .
 wget https://meme-suite.org/meme/meme-software/5.5.8/meme-5.5.8.tar.gz
-tar zxf meme-5.5.8.tar.gz
+tar zxf /data/work/SCPipelines/meme-5.5.8.tar.gz
 cd meme-5.5.8
 ./configure --prefix=$HOME/meme --enable-build-libxml2 --enable-build-libxslt
 make

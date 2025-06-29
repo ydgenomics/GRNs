@@ -107,3 +107,4 @@ filtered_regulatory <- filter_ATAC(potential_regulation,regulatory_relationships
 
 # Part 3: Regulatory network analysis and visualization
 # filtered_regulatory_relationships Kmeans_clustering_ENS
+TFs_list <- network_analysis(filtered_regulatory_relationships,Kmeans_clustering_ENS,TFFDR1 = 10,TFFDR2 = 10)
