@@ -24,6 +24,8 @@ Rscript -e 'devtools::install_github("jiang-junyao/IReNA")'
 conda install bioconda::bioconductor-annotationdbi -y
 conda install bioconda::bioconductor-genie3 -y
 conda install conda-forge::r-doparallel -y
+conda install conda-forge::r-dorng -y
+# conda install conda-forge::r-reshape2 -y
 ```
 
 ```R
@@ -66,6 +68,18 @@ library(purrr)
 conda create -n htseq -y
 conda activate htseq
 conda install bioconda::htseq -y
+
+conda create -n samtools -y
+conda activate samtools
+conda install bioconda::samtools -y
+
+conda create -n bedtools -y
+conda activate bedtools
+conda install bioconda::bedtools -y
+
+conda create -n macs3 -y
+conda activate macs3
+conda install -c bioconda macs3 -y
 ```
 [pp.scRNAseq](https://jiang-junyao.github.io/IReNA/scRNA-seq-preprocessing)
 
@@ -88,18 +102,6 @@ fastp --version
 fastqc --version
 cutadapt --version
 bowtie2 --version
-
-conda create -n samtools -y
-conda activate samtools
-conda install bioconda::samtools -y
-
-conda create -n bedtools -y
-conda activate bedtools
-conda install bioconda::bedtools -y
-
-conda create -n macs3 -y
-conda activate macs3
-conda install -c bioconda macs3 -y
 ```
 
 [树棉：*Gossypium arboreum*](https://baike.baidu.com/item/%E6%A0%91%E6%A3%89/1706952?fromModule=search-result_lemma)
@@ -157,6 +159,7 @@ conda install bioconda::bioconductor-txdbmaker -y
 ```shell
 # sudo cp /data/work/SCPipelines/meme-5.5.8.tar.gz .
 wget https://meme-suite.org/meme/meme-software/5.5.8/meme-5.5.8.tar.gz
+cd ~
 tar zxf /data/work/SCPipelines/meme-5.5.8.tar.gz
 cd meme-5.5.8
 ./configure --prefix=$HOME/meme --enable-build-libxml2 --enable-build-libxslt
