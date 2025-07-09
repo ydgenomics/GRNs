@@ -1,16 +1,12 @@
-# 定义变量
-# E1_N2_bam="/data/input/Files/taoziyi/cotton_atac/NB2025053011270768166314/ATAC-seq/E1-2_bwa_rmdup.bam"
-# E1_N1_bam="/data/input/Files/taoziyi/cotton_atac/NB2025053011270768166314/ATAC-seq/E1-1_bwa_rmdup.bam"
-# E1_0_bam="/data/input/Files/taoziyi/cotton_atac/NB2025053011270768166314/ATAC-seq/E1_0_bwa_rmdup.bam"
-# E1_P1_bam="/data/input/Files/taoziyi/cotton_atac/NB2025053011270768166314/ATAC-seq/E1_1_bwa_rmdup.bam"
 
-# # 将变量名和对应的 BAM 文件路径存储到数组中
-# names=("E1_N2" "E1_N1" "E1_0" "E1_P1")
-# bams=($E1_N2_bam $E1_N1_bam $E1_0_bam $E1_P1_bam)
-genome_size=1444625381
+# bams_txt="/data/work/test0629/bams.txt"
+# names_txt="/data/work/test0629/names.txt"
+# genome_size=1444625381
 
-names_txt="/data/work/test0629/names.txt"
-bams_txt="/data/work/test0629/bams.txt"
+bams_txt=$1
+names_txt=$2
+genome_size=$3
+
 # 读取文件内容并按逗号分割
 IFS=',' read -r -a names <<< "$(cat "$names_txt")"
 IFS=',' read -r -a bams <<< "$(cat "$bams_txt")"
@@ -24,7 +20,8 @@ if [ "$len_names" -ne "$len_bams" ]; then
   echo "Error: The number of names and outputs does not match."
   exit 1
 fi
-    
+
+# samtools view /data/input/Files/taoziyi/cotton_atac/NB2025053011270768166314/ATAC-seq/E1-2_bwa_rmdup.bam | head -n 10
 ################################## 05_call_peaks ##################################
 mkdir 05_call_peaks
 cd 05_call_peaks
@@ -112,13 +109,20 @@ merge_sort_count <- function (count_all, gtf) {
 }
 merged_count <- merge_sort_count(count_all, peaks_gtf)
 head(merged_count) ### first column is chromosome, second column is peak start site, third column is peak end site, the fourth through sixth columns are counts
-# group1 <- c(1,1,2)  ### set group for three sample
-group1 <- c(1,1,1,2) # added by yd
-# differential_peaks1 <- diff_peaks(merged_count[,4:6], group1) ### identify differential peaks
-differential_peaks1 <- diff_peaks(merged_count[,4:7], group1) # added by yd
-head(differential_peaks1)
-differential_peaks2 <- merged_count[differential_peaks1[,3]<0.05,] ### filter peaks whose FDR is more than 0.05
-write.table(differential_peaks2[, c(1,2,3)], "differential_peaks.bed", quote = F, row.name = F, col.names = F, sep = "\t")
+write.table(merged_count[, c(1,2,3)], "peaks.bed", quote = F, row.name = F, col.names = F, sep = "\t")
+# # group1 <- c(1,1,2)  ### set group for three sample
+# group1 <- c(1,1,1,2) # added by yd
+# # differential_peaks1 <- diff_peaks(merged_count[,4:6], group1) ### identify differential peaks
+# differential_peaks1 <- diff_peaks(merged_count[,4:7], group1) # added by yd
+# head(differential_peaks1)
+# differential_peaks2 <- merged_count[differential_peaks1[,3]<0.05,] ### filter peaks whose FDR is more than 0.05
+# write.table(differential_peaks2[, c(1,2,3)], "differential_peaks.bed", quote = F, row.name = F, col.names = F, sep = "\t")
+
+### If you only have one sample, run the following codes
+# SSC_patient1_Counts <- read.delim("SSC_patient1_Counts.txt", header=FALSE)
+# peaks_gtf <- read.delim("peak_merged.gtf", header=FALSE)
+# merged_count <- merge_sort_count(SSC_patient1_Counts, peaks_gtf)
+# write.table(merged_count[, c(1,2,3)], "peaks.bed", quote = F, row.name = F, col.names = F, sep = "\t")
 '
 # 运行 R 代码
 echo "$R_CODE" | /opt/software/miniconda3/envs/IReNA/bin/R --vanilla
@@ -127,36 +131,3 @@ mkdir ../09_merge_bams
 cd ../09_merge_bams
 
 /opt/software/miniconda3/envs/samtools/bin/samtools merge merged_all.bam "${bams[@]}"
-
-################################## 10_footprints ##################################
-mkdir ../10_footprints
-cd ../10_footprints
-
-genome="/data/work/SCPipelines/pp_bulkATAC/build_rgtdata/ga/genome_ga.fa"
-genome_fai="/data/work/SCPipelines/pp_bulkATAC/build_rgtdata/ga/genome_ga.fa.fai"
-chromosome_sizes="/data/work/SCPipelines/pp_bulkATAC/build_rgtdata/ga/chrom.sizes.ga"
-gene_regions="/data/work/SCPipelines/pp_bulkATAC/build_rgtdata/ga/genes_ga.bed"
-annotation="/data/work/SCPipelines/pp_bulkATAC/build_rgtdata/ga/ga.gtf"
-gene_alias="/data/work/SCPipelines/pp_bulkATAC/build_rgtdata/ga/alias_ga.txt"
-
-sudo mkdir ~/rgtdata/tair10
-sudo cp $genome ~/rgtdata/tair10/genome_tair10_ensembl_release_51.fa
-sudo cp $genome_fai ~/rgtdata/tair10/genome_tair10_ensembl_release_51.fa.fai
-sudo cp $chromosome_sizes ~/rgtdata/tair10/chrom.sizes.tair10
-sudo cp $gene_regions ~/rgtdata/tair10/genes_tair10.bed
-sudo cp $annotation ~/rgtdata/tair10/Arabidopsis_thaliana.TAIR10.51.gtf
-sudo cp $gene_alias ~/rgtdata/tair10/alias_tair10.txt
-
-rgt-hint footprinting --atac-seq --paired-end --organism=tair10 \
-../09_merge_bams/merged_all.bam ../08_differential_peaks/differential_peaks.bed
-
-R_CODE='
-### R code
-# footprints <- read.table("footprints.bed",sep="\t",header = T)
-footprints <- read.table("footprints.bed", sep="\t", header = FALSE)
-footprints_80th <- footprints[footprints$V5 > quantile(footprints$V5, 0.8),] # `quantile`
-footprints_80th <- footprints_80th[,c(1,2,3,5)]
-write.table(footprints_80th, "filtered_footprints.bed", quote=F, sep = "\t", row.names = F, col.names = F)
-'
-
-echo "$R_CODE" | /opt/software/miniconda3/envs/IReNA/bin/R --vanilla
