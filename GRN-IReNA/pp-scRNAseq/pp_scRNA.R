@@ -25,6 +25,15 @@ seurat_object <- readRDS(input_rds); seurat_object; head(rownames(seurat_object)
 # Assay RNA changing from Assay5 to Assay # added by yd
 seurat_object[["RNA"]] <- as(seurat_object[["RNA"]], "Assay") # added by yd
 
+head(VariableFeatures(seurat_object))
+variable_genes <- VariableFeatures(seurat_object)
+counts_matrix <- GetAssayData(seurat_object, slot = "counts")[variable_genes, ] # 提取 counts 矩阵（仅保留 variable features）
+hvg_object <- CreateSeuratObject(counts = counts_matrix)
+hvg_object@meta.data <- seurat_object@meta.data
+hvg_object <- NormalizeData(hvg_object)
+hvg_object[["RNA"]]<-as(object=hvg_object[["RNA"]],Class="Assay")
+hvg_object
+
 ### Calculate the pseudotime and return monocle object
 monocle_object <- get_pseudotime(seurat_object,gene.use = rownames(seurat_object)) #https://rdrr.io/github/jiang-junyao/IReNA/man/get_pseudotime.html
 # monocle_object <- get_pseudotime(seurat_object,gene.use = NULL)

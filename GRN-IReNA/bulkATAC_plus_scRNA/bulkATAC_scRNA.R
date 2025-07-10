@@ -2,7 +2,6 @@
 library(IReNA)
 library(AnnotationDbi)
 
-
 args <- commandArgs(trailingOnly = TRUE)
 time_rds <- args[1]
 input_bams_txt <- args[2]
@@ -15,6 +14,8 @@ pwm_dir <- args[7]
 peaks_bed <- args[8]
 txdb_sqlite <- args[9]
 work_path <- args[10]
+get_merged_fasta_R <- args[11]
+annotation_R <- args[12]
 
 setwd(work_path)
 # Part 1: Analyze scRNA-seq or bulk RNA-seq data to get basic regulatory relationships
@@ -79,88 +80,8 @@ message("Part 2: Analyze bulk ATAC-seq data to refine regulatory relationships (
 ###merge footprints whose distance is less than 4
 filtered_footprints <- read.table(footprints_bed,sep = '\t');head(filtered_footprints)
 fastadir <- genome_fa
-##################### get_merged_fasta #####################
-get_merged_fasta <- function(footprints, fastadir, distance = 4) {
-  # validInput(footprints,'footprints','df') # added by yd
-  # validInput(fastadir,'fastadir','direxists') # added by yd
-  # validInput(distance,'distance','numeric') # added by yd
-  merged_footprints <- merge_footprints(footprints, ditance = distance)
-  fasta <- getfasta(merged_footprints, fastadir = fastadir)
-  return(fasta)
-}
 
-
-merge_footprints <- function(footprints, ditance = 4, revise = TRUE) {
-  con1 <- footprints
-  str1 <- con1[1,1]
-  start1 <- con1[1,2]
-  end1 <- con1[1,3]
-  pva1 <- con1[1,4]
-  no1 <- 1
-  out1 <- c()
-  for (i in 2:nrow(con1)) {
-    str2 <- as.character(con1[i, ][1])
-    start2 <- as.numeric(con1[i, ][2])
-    end2 <- as.numeric(con1[i, ][3])
-    pva2 <- as.numeric(con1[i, ][4])
-    if (str2 == str1 & (start1 >= start2 & start1 <= end2 | end1 >= start2 &
-                        end1 <= end2 | start1 <= start2 & end1 >= end2 | start2 >
-                        end1 & (start2 - end1) <= ditance | start1 > end2 &
-                        (start1 - end2) <= ditance)) {
-      acc22 <- sort(c(start1, start2, end1, end2))
-      start1 <- acc22[1]
-      end1 <- acc22[4]
-      pva1 <- pva1 + pva2
-      no1 <- no1 + 1
-    } else {
-      pva2 <- pva1 / no1
-      col1 <- paste(str1, start1, end1, pva2, sep = "\t")
-      out1 <- c(out1, col1)
-      str1 <- str2
-      start1 <- start2
-      end1 <- end2
-      pva1 <- as.numeric(con1[i, ][4])
-      no1 <- 1
-    }
-  }
-  out2 <- as.data.frame(t(as.data.frame(strsplit(out1, "\t"))))
-  colnames(out2) <- c("chr", "strat", "stop", "pvalue")
-  out2[, 2] <- as.numeric(out2[, 2])
-  out2[, 3] <- as.numeric(out2[, 3])
-  if (revise == TRUE) {
-    out2[, 2] <- out2[, 2] - 2
-    out2[, 3] <- out2[, 3] + 2
-    return(out2)
-  } else {
-    return(out2)
-  }
-}
-
-
-getfasta <- function(merged_footprints, fastadir) {
-  fasta <- Biostrings::readBStringSet(fastadir, format = "fasta", nrec = -1L,
-                                      skip = 0L, seek.first.rec = FALSE,
-                                      use.names = TRUE)
-  fasta1 <- c()
-  for (i in 1:nrow(merged_footprints)) {
-    name <- paste0(">", merged_footprints[i, 1], ":", merged_footprints[i, 2],
-                   "-", merged_footprints[i, 3])
-    if (merged_footprints[i, 3] > length(fasta[[merged_footprints[i, 1]]])) {
-      sequence <- toupper(as.character(fasta[[merged_footprints[i, 1]]][
-        (merged_footprints[i, 2] + 1):length(fasta[[merged_footprints[i, 1]]])]))
-      name <- paste0(">", merged_footprints[i, 1], ":", merged_footprints[i, 2],
-                     "-", length(fasta[[merged_footprints[i, 1]]]))
-    } else{
-      sequence <- toupper(as.character(fasta[[merged_footprints[i, 1]]][
-        (merged_footprints[i, 2] + 1):merged_footprints[i, 3]]))
-    }
-    fasta1 <- c(fasta1, name, sequence)
-  }
-  fasta1 <- as.data.frame(fasta1)
-  return(fasta1)
-}
-################################################################
-# source("/data/work/SCPipelines/all/get_merged_fasta.R")
+source(get_merged_fasta_R)
 merged_fasta <- get_merged_fasta(filtered_footprints,fastadir); head(merged_fasta)
 write.table(merged_fasta,'merged_footprints.fasta',row.names=F,quote=F,col.names=F)
 
@@ -170,7 +91,7 @@ motif1 <- motifs_select(motif1, rownames(Kmeans_clustering_ENS)) ###Kmeans_clust
 fimodir <- 'fimo'
 outputdir1 <- './fimo/output/'
 outputdir <- './fimo/output/'
-motifdir <- '/data/work/SCPipelines/Gar_individual_motif2/'
+motifdir <- pwm_dir
 sequencedir <- 'merged_footprints.fasta'
 find_motifs(motif1,step=20,fimodir, outputdir1, outputdir, motifdir, sequencedir)
 
@@ -224,150 +145,14 @@ overlapped <- overlap_footprints_peaks(combined,peaks)
 length(overlapped$sequence_name)
 
 ###get footprint-related genes
-txdb <- loadDb("/data/work/SCPipelines/gtf2txdb/txdb.sqlite")
+txdb <- loadDb(txdb_sqlite)
 # library(TxDb.Hsapiens.UCSC.hg38.knownGene)
 # txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene # Build species specify TxDb
 # sudo /opt/software/miniconda3/envs/IReNA/bin/Rscript -e 'install.packages("/data/work/SCPipelines/build_orgdb/orgdb/org.Ga.eg.db", repos = NULL, type = "sources")'
 annodb <- "org.Ga.eg.db"
 library(org.Ga.eg.db)
-# source("/data/work/SCPipelines/all/annotation.R")
-############################### annotation.R ###############################
-# Ref: https://rdrr.io/github/jiang-junyao/IReNA/src/R/annotation.R annotation.R
-#' Annotate peaks based on regions of peak
-#' @description This function first merge and extend footprint regions, and then
-#'  integrate R package ChIPseeker to get footprint-related genes
-#' @param footprints footprints that overlap with peaks, generated by overlap_footprints_peaks() or
-#'  intersect function of bedtools
-#' @param motif motif file, you can choose our bulit-in motif database of
-#' 'mus musculus', 'homo sapiens', 'zebrafish' and 'chicken' by 'motif = Tranfac201803_Mm_MotifTFsF',
-#' 'motif = Tranfac201803_Hs_MotifTFsF', 'motif = Tranfac201803_Zf_MotifTFsF',
-#' 'motif = Tranfac201803_Ch_MotifTFsF' respectively, or you can upload your own motif data base,
-#'  but the formata use be the same as our built-in motif database.
-#' @param Species character, indicating the species of data which is used to
-#' choose annodb when annotate peak.
-#' @param txdb 	TxDb object contained transcript-related features of a particular
-#' genome. Bioconductor provides several package that containing TxDb object of
-#' model organisms with multiple commonly used genome version, for instance
-#' TxDb.Hsapiens.UCSC.hg38.knownGene, TxDb.Hsapiens.UCSC.hg19.knownGene for
-#' human genome hg38 and hg19, TxDb.Mmusculus.UCSC.mm10.knownGene and TxDb.Mmusculus.UCSC.mm9.knownGene
-#' for mouse genome mm10 and mm9, etc.
-#' @param tssRegion Region Range of TSS
-#' @importFrom GenomicRanges GRanges
-#' @importFrom IRanges IRanges
-#' @importFrom ChIPseeker annotatePeak
-#' @return return a list, first element is bed format datafrmae, second element
-#' is annotated footprints dataframe
-#' @export
-#'
-#' @examples #txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
-#' load(system.file("extdata", "combined.rda", package = "IReNA"))
-#' load(system.file("extdata", "test_peak.rda", package = "IReNA"))
-#' peak_bed <- get_bed(test_peak)
-#' overlapped <- overlap_footprints_peaks(combined, peak_bed)
-#' #list1 <- get_related_genes(overlapped,txdb = txdb,motif=Tranfac201803_Mm_MotifTFsF,Species = 'Mm')
 
-# footprints <- overlapped
-# motif <- motif1
-# txdb <- txdb
-# Species <- "ga"
-# tssRegion = c(-3000, 3000)
-
-get_related_genes <- function(footprints, motif, Species, txdb, tssRegion = c(-3000, 3000)) {
-  # validInput(footprints,'footprints','df')
-  # validInput(motif,'motif','df')
-  # validInput(Species,'Species','character')
-  # validInput(txdb,'txdb','txdb')
-  # validInput(tssRegion,'tssRegion','vector')
-  footprintslist <- merge_extent_footprints(footprints, motif)
-  merged_footprints <- footprintslist[[2]]
-  if (Species == "Hs") {
-    annodb <- "org.Hs.eg.db"
-  } else if (Species == "Mm") {
-    annodb <- "org.Mm.eg.db"
-  } else if (Species == "Zf") {
-    annodb <- "org.Dr.eg.db"
-  } else if (Species == "Ch") {
-    annodb <- "org.Gg.eg.db"
-  } else if (Species == "ga") { # added by yd
-    annodb <- "org.Ga.eg.db"
-  }
-  reference_GRange <- GenomicRanges::GRanges(seqnames = merged_footprints[,1],
-                                             IRanges::IRanges(start = as.numeric(merged_footprints[,2]),
-                                                              end = as.numeric(merged_footprints[,3])),
-                                             strand = merged_footprints[,4])
-  peakAnno <- ChIPseeker::annotatePeak(reference_GRange,
-    tssRegion = tssRegion,
-    TxDb = txdb, annoDb = annodb
-  )
-  region <- peakAnno@anno@elementMetadata$annotation
-  # gene <- peakAnno@anno@elementMetadata$ENSEMBL
-  gene <- peakAnno@anno@elementMetadata$geneId # added by yd
-  start1 <- peakAnno@anno@ranges@start
-  merged_footprints2 <- merged_footprints[merged_footprints$V2 %in% start1, ]
-  exon1 <- grep('exon',region)
-  Intron1 <- grep('Intron',region)
-  Intergenic1 <- grep('Intergenic',region)
-  Downstream1 <- grep('Downstream',region)
-  Promoter1 <- grep('Promoter',region)
-  UTR3 <- grep("3' UTR",region)
-  UTR5 <- grep("5' UTR",region)
-  region2 <- rep(NA,length(region))
-  region2[exon1]='Exon'
-  region2[Intron1]='Intron'
-  region2[Downstream1]='Downstream'
-  region2[Promoter1]='Promoter'
-  region2[UTR3]="3' UTR"
-  region2[UTR5]="5' UTR"
-  region2[Intergenic1]='Intergenic'
-  table(region2)
-  peak_region1 <- paste(as.character(peakAnno@anno@seqnames),
-                        as.character(peakAnno@anno@ranges),sep = ':')
-  peak_region2 <- paste0(merged_footprints[,1],':'
-                         ,merged_footprints[,2],'-',merged_footprints[,3])
-  merged_footprints2 <- merged_footprints[peak_region2%in%peak_region1,]
-  merged_footprints2$gene <- gene
-  merged_footprints2$region <- region2
-  merged_footprints2 <- merged_footprints2[, c(9, 8, 1:7)]
-  colnames(merged_footprints2) <- c(paste0("V", 1:9))
-  footprintslist[[2]] <- merged_footprints2
-  footprintslist[[1]] <- footprintslist[[1]][peak_region2%in%peak_region1,]
-  return(footprintslist)
-}
-
-
-
-merge_extent_footprints <- function(file1, motif1) {
-  file1 <- file1[file1[,7] %in% motif1$Accession,]
-  peak_region <- paste(as.character(file1[,1]), file1[,2],
-                       file1[,3], file1[,4], sep = "\t")
-  file1$peak_region <- peak_region
-  file1$tf <- motif1[match(file1[,7],motif1[,1]),5]
-  group_peak <- dplyr::group_by(file1,peak_region)
-  group_peak <- group_peak[order(group_peak$peak_region),]
-  group_peak2 <-dplyr::group_map(group_peak,~merge_group(.x))
-  group_peak3 <- as.data.frame(group_peak[!duplicated(group_peak$peak_region),])
-  num1 <- as.integer((as.numeric(group_peak3[,2]) + as.numeric(group_peak3[,3])) / 2)
-  size1 <- as.numeric(group_peak3[,3]) - as.numeric(group_peak3[,2]) + 1
-  num11 <- as.integer(num1 - (size1 * 5))
-  num12 <- as.integer(num1 + (size1 * 5))
-  peak_index = paste0(group_peak3[,8],':',group_peak3[,9],'-',group_peak3[,10])
-  Candid <- group_peak3[,1:4]
-  Candid <- dplyr::mutate(Candid, V5 = num11 ,V6=num12,V7=unlist(group_peak2))
-  bed <- Candid[,c(1,5,6)]
-  list1 <- list(bed,Candid)
-  return(list1)
-}
-
-
-
-merge_group <- function(data1){
-  data1 <- as.data.frame(data1)
-  motif <- as.character(data1[,7])
-  related_gene <- as.character(data1[,11])
-  mg <- paste(motif,related_gene,sep = ';',collapse = '|')
-  return(mg)
-}
-##########################################################
+source(annotation_R)
 list1 <- get_related_genes(overlapped,txdb = txdb,motif=motif1,Species = 'ga')
 str(list1)
 ###Get candidate genes/TFs-related peaks
@@ -422,6 +207,19 @@ for (i in seq_along(bam_filepaths)) {
         index_bam = TRUE
     )
 }
+
+### calculate cuts of each each position in footprints
+bamfilepath1 <- "input_1_filter.bam"  
+bamfilepath2 <- "input_2_filter.bam"
+bamfilepath3 <- "input_3_filter.bam"
+bamfilepath4 <- "input_4_filter.bam"
+### set parameter 'workers' to make this function run in parallel
+cuts1 <- cal_footprint_cuts(bamfilepath = bamfilepath1,bedfile = list2[[1]],workers = 16,index_bam = T)
+cuts2 <- cal_footprint_cuts(bamfilepath = bamfilepath2,bedfile = list2[[1]],workers = 16,index_bam = T)
+cuts3 <- cal_footprint_cuts(bamfilepath = bamfilepath3,bedfile = list2[[1]],workers = 16,index_bam = T)
+cuts4 <- cal_footprint_cuts(bamfilepath = bamfilepath4,bedfile = list2[[1]],workers = 16,index_bam = T)
+cut_list <- list(cuts1,cuts2,cuts3,cuts4)
+
 ### get related genes of footprints with high FOS
 potential_regulation <- Footprints_FOS(cut_list,list2[[2]], FOS_threshold = 0.1); length(potential_regulation$TF)
 # potential_regulation <- Footprints_FOS(cut_list,list2[[2]], FOS_threshold = 0); length(potential_regulation$TF)
@@ -456,6 +254,10 @@ length(filtered_regulatory$TF)
 
 TFs_list <- network_analysis(filtered_regulatory,Kmeans_clustering_ENS,TFFDR1 = 10,TFFDR2 = 10, ModuleFDR = 0.05)
 str(TFs_list)
+
+save(TFs_list, file = "TFs_list.RData")
+# load("TFs_list.RData")
+# str(TFs_list)
 
 # Part 3: Regulatory network analysis and visualization
 # filtered_regulatory_relationships <- filtered_regulatory # added by yd
