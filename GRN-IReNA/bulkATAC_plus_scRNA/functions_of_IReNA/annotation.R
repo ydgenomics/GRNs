@@ -38,25 +38,28 @@
 # Species <- "ga"
 # tssRegion = c(-3000, 3000)
 
-get_related_genes <- function(footprints, motif, Species, txdb, tssRegion = c(-3000, 3000)) {
-  validInput(footprints,'footprints','df')
-  validInput(motif,'motif','df')
-  validInput(Species,'Species','character')
-  validInput(txdb,'txdb','txdb')
-  validInput(tssRegion,'tssRegion','vector')
+# get_related_genes <- function(footprints, motif, Species, txdb, tssRegion = c(-3000, 3000)) {
+get_related_genes <- function(footprints, motif, annodb, txdb, tssRegion = c(-3000, 3000)) {
+  # validInput(footprints,'footprints','df')
+  # validInput(motif,'motif','df')
+  # validInput(Species,'Species','character')
+  # validInput(txdb,'txdb','txdb')
+  # validInput(tssRegion,'tssRegion','vector')
   footprintslist <- merge_extent_footprints(footprints, motif)
   merged_footprints <- footprintslist[[2]]
-  if (Species == "Hs") {
-    annodb <- "org.Hs.eg.db"
-  } else if (Species == "Mm") {
-    annodb <- "org.Mm.eg.db"
-  } else if (Species == "Zf") {
-    annodb <- "org.Dr.eg.db"
-  } else if (Species == "Ch") {
-    annodb <- "org.Gg.eg.db"
-  } else if (Species == "ga") { # added by yd
-    annodb <- "org.Ga.eg.db"
-  }
+  # if (Species == "Hs") {
+  #   annodb <- "org.Hs.eg.db"
+  # } else if (Species == "Mm") {
+  #   annodb <- "org.Mm.eg.db"
+  # } else if (Species == "Zf") {
+  #   annodb <- "org.Dr.eg.db"
+  # } else if (Species == "Ch") {
+  #   annodb <- "org.Gg.eg.db"
+  # } else if (Species == "ga") { # added by yd
+  #   annodb <- "org.Ga.eg.db"
+  # } else {
+  #    annodb <- NULL
+  # }
   reference_GRange <- GenomicRanges::GRanges(seqnames = merged_footprints[,1],
                                              IRanges::IRanges(start = as.numeric(merged_footprints[,2]),
                                                               end = as.numeric(merged_footprints[,3])),
