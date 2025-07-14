@@ -25,6 +25,7 @@ conda install bioconda::bioconductor-annotationdbi -y
 conda install bioconda::bioconductor-genie3 -y
 conda install conda-forge::r-doparallel -y
 conda install conda-forge::r-dorng -y
+conda install conda-forge::r-optparse -y
 # conda install conda-forge::r-reshape2 -y
 ```
 

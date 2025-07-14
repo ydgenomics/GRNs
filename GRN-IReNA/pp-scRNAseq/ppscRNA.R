@@ -1,12 +1,16 @@
 # Ref: https://jiang-junyao.github.io/IReNA/scRNA-seq-preprocessing
-# /software/miniconda/envs/IReNA/bin/R
+# /opt/software/miniconda3/envs/IReNA/bin/Rscript /data/work/test0711/pp_scRNA.R \
+# /data/work/SCPipelines/pp_scRNA/tf_blinding_motif_ga.txt \
+# /data/work/SCPipelines/bulk_RNA_scRNA_singleR/split/seu_day-2.rds \
+# 1500
 
 library(IReNA)
 library(Seurat)
 
 args <- commandArgs(trailingOnly = TRUE)
-motif_txt <- args[1] # /data/work/SCPipelines/pp_scRNA/tf_blinding_motif_ga.txt
+motif_txt <- args[1] # /data/work/SCPipelines/pp_scRNA/tf_blinding_motif_ga2.txt
 input_rds <- args[2] # /data/work/SCPipelines/bulk_RNA_scRNA_singleR/split/seu_day-2.rds
+n_hvg <- as.integer(args[3])
 
 # ###call Mus musculus motif database
 # motif1 <- Tranfac201803_Mm_MotifTFsF; head(motif1)
@@ -25,14 +29,16 @@ seurat_object <- readRDS(input_rds); seurat_object; head(rownames(seurat_object)
 # Assay RNA changing from Assay5 to Assay # added by yd
 seurat_object[["RNA"]] <- as(seurat_object[["RNA"]], "Assay") # added by yd
 
-head(VariableFeatures(seurat_object))
-variable_genes <- VariableFeatures(seurat_object)
-counts_matrix <- GetAssayData(seurat_object, slot = "counts")[variable_genes, ] # 提取 counts 矩阵（仅保留 variable features）
+hvg_object <- seurat_object
+hvg_object <- FindVariableFeatures(hvg_object, selection.method = "vst", nfeatures = n_hvg)
+variable_genes <- VariableFeatures(hvg_object)
+counts_matrix <- GetAssayData(hvg_object, slot = "counts")[variable_genes, ] # 提取 counts 矩阵（仅保留 variable features）
 hvg_object <- CreateSeuratObject(counts = counts_matrix)
 hvg_object@meta.data <- seurat_object@meta.data
 hvg_object <- NormalizeData(hvg_object)
 hvg_object[["RNA"]]<-as(object=hvg_object[["RNA"]],Class="Assay")
 hvg_object
+saveRDS(hvg_object, file = paste0(basename(input_rds), "_hvg", n_hvg,".rds"))
 
 ### Calculate the pseudotime and return monocle object
 monocle_object <- get_pseudotime(seurat_object,gene.use = rownames(seurat_object)) #https://rdrr.io/github/jiang-junyao/IReNA/man/get_pseudotime.html
