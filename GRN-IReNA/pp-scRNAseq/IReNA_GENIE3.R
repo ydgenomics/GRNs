@@ -1,4 +1,4 @@
-# Date: 250711
+# Date: 250715
 # IReNA /opt/software/miniconda3/envs/IReNA/bin/R
 
 library(IReNA)
@@ -9,33 +9,43 @@ library(doParallel)
 library(doRNG)
 library(reshape2)
 library(dplyr)
+library(optparse)
 
-args <- commandArgs(trailingOnly = TRUE)
-motif_txt <- args[1] # /data/work/SCPipelines/pp_scRNA/tf_blinding_motif_ga.txt
-input_rds <- args[2] # /data/work/SCPipelines/bulk_RNA_scRNA_singleR/split/seu_day-2.rds
-n_kcluster <- as.integer(args[3]) # less than 8
-n_cores <- as.integer(args[4]) # 32
-if (length(args) == 7) {
-  bin_method <- args[5]   # 'pseudotime' or 'ydgenomics'
-  bin_key <- args[6]      # 'seurat_clusters'
-  get_SmoothByBin_PseudotimeExp_yd_R <- args[7] # path
-}
+option_list <- list(
+  make_option(c("-m", "--motif_txt"), type = "character", default = "/data/users/yangdong/yangdong_faff775391984da0a355d4bd70217714/online/SCPipelines/pp_scRNA/tf_blinding_motif_ga2.txt", help = "Motif txt file path"),
+  make_option(c("-i", "--input_rds"), type = "character", default = "/data/users/yangdong/yangdong_8632f88957bb4c4f85daf59edaf6b059/online/IReNA/P1/seu_day1.rds_hvg3000.rds", help = "Input RDS file path"),
+  make_option(c("-k", "--n_kcluster"), type = "integer", default = 4, help = "Number of k-means clusters (less than 8)"),
+  make_option(c("-c", "--n_cores"), type = "integer", default = 32, help = "Number of cores"),
+  make_option(c("-b", "--bin_method"), type = "character", default = "cluster", help = "Bin method: 'pseudotime' or 'cluster'"),
+  make_option(c("-K", "--bin_key"), type = "character", default = "seurat_clusters", help = "Bin key"),
+  make_option(c("-s", "--get_SmoothByBin_PseudotimeExp_yd_R"), type = "character", default = "/data/users/yangdong/yangdong_8632f88957bb4c4f85daf59edaf6b059/online/IReNA/get_SmoothByBin_PseudotimeExp_yd.R", help = "Path to get_SmoothByBin_PseudotimeExp_yd R script")
+)
+
+opt <- parse_args(OptionParser(option_list = option_list))
+
+motif_txt <- opt$motif_txt
+input_rds <- opt$input_rds
+n_kcluster <- opt$n_kcluster
+n_cores <- opt$n_cores
+bin_method <- opt$bin_method
+bin_key <- opt$bin_key
+get_SmoothByBin_PseudotimeExp_yd_R <- opt$get_SmoothByBin_PseudotimeExp_yd_R
 
 
 # Part 1: Analyze scRNA-seq or bulk RNA-seq data to get basic regulatory relationships
 ###Load the test data
 seurat_with_time <- readRDS(input_rds)
 ###Get expression profiles ordered by pseudotime
-if ("Pseudotime" %in% colnames(seurat_with_time@meta.data) && 
+if (bin_method == "pseudotime" && "Pseudotime" %in% colnames(seurat_with_time@meta.data) && 
     "State" %in% colnames(seurat_with_time@meta.data)) {
   expression_profile <- get_SmoothByBin_PseudotimeExp(seurat_with_time, Bin = 50)
-} else if (bin_method == "ydgenomics") {
+} else if (bin_method == "cluster") {
     source(get_SmoothByBin_PseudotimeExp_yd_R)
     expression_profile <- get_SmoothByBin_PseudotimeExp_yd(
     seurat_object=seurat_with_time,
     FC = TRUE,
     Bin_key = bin_key,
-    method = 'ydgenomics',
+    method = 'cluster',
     FcType = "Q95"
   )
 } else {
@@ -52,9 +62,10 @@ Kmeans_clustering_ENS$Symbol <- rownames(Kmeans_clustering_ENS)
 Kmeans_clustering_ENS <- Kmeans_clustering_ENS[, c("Symbol", setdiff(names(Kmeans_clustering_ENS), "Symbol"))]
 Kmeans_clustering_ENS[1:5,1:5]
 
-colors <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3","#FF7F00", "#FFFF33", "#A65628", "#F781BF")
-pdf('plot_kmeans_pheatmap.pdf', width=10, height=10)
-plot_kmeans_pheatmap(clustering,ModuleColor1 = colors)
+colors <- c("#e41a89", "#377EB8", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#00CED1")
+colors <- colors[1:n_kcluster]
+pdf('plot_kmeans_pheatmap.pdf', width=12, height=10)
+plot_kmeans_pheatmap(clustering,ModuleColor1 = colors, show_colnames = TRUE, Show.Module = TRUE)
 dev.off()
 
 motif1 <- read.table(motif_txt, sep = "\t", header = TRUE, stringsAsFactors = FALSE) # added by yd

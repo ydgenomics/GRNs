@@ -1,8 +1,12 @@
+# Date: 250715
 # Ref:
 get_SmoothByBin_PseudotimeExp_yd <- function(seurat_object, FC = TRUE, Bin_key = "seurat_clusters",
-                                          method = 'ydgenomics',FcType = "Q95"){
+                                          method = 'cluster',FcType = "Q95"){
     hvg_object <- seurat_object
     # hvg_object[["RNA"]]<-as(object=hvg_object[["RNA"]],Class="Assay")
+    # Specify cluster named IReNA_cluster
+    hvg_object$IReNA_cluster <- hvg_object@meta.data[[Bin_key]]
+    Idents(hvg_object) <- hvg_object$IReNA_cluster
     n_cell <- length(unique(hvg_object@meta.data[[Bin_key]]))
     list_cell <- unique(hvg_object@meta.data[[Bin_key]])
 
@@ -10,7 +14,7 @@ get_SmoothByBin_PseudotimeExp_yd <- function(seurat_object, FC = TRUE, Bin_key =
     Exp2 <- array(0, dim = c(nrow(Exp1), n_cell))
 
     for (i in 1:n_cell) {
-      Cells1 <- subset(hvg_object, seurat_clusters==list_cell[i])
+      Cells1 <- subset(hvg_object, IReNA_cluster==list_cell[i])
       # print(colnames(Cells1))
       if (nrow(Cells1) > 1) {
         Exp2[, i] <- rowMeans(Exp1[, match(colnames(Cells1), colnames(Exp1))])

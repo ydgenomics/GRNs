@@ -1,3 +1,4 @@
+# # Date: 250715
 # Ref: https://rdrr.io/github/jiang-junyao/IReNA/src/R/annotation.R annotation.R
 #' Annotate peaks based on regions of peak
 #' @description This function first merge and extend footprint regions, and then

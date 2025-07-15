@@ -7,8 +7,8 @@ bams_txt=$1
 names_txt=$2
 genome_size=$3
 
-# bams_txt="/data/work/test0710/bams.txt"
-# names_txt="/data/work/test0710/names.txt"
+# bams_txt="/data/work/P0/bams.txt"
+# names_txt="/data/work/P0/names.txt"
 # genome_size=1444625381
 
 # 读取文件内容并按逗号分割

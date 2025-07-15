@@ -1,3 +1,4 @@
+# Date: 250715
 get_merged_fasta <- function(footprints, fastadir, distance = 4) {
   # validInput(footprints,'footprints','df') # added by yd
   # validInput(fastadir,'fastadir','direxists') # added by yd

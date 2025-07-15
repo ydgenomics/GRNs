@@ -1,4 +1,6 @@
+# Date: 250715
 # IReNA /opt/software/miniconda3/envs/IReNA/bin/R
+
 library(IReNA)
 library(AnnotationDbi)
 library(Seurat)
@@ -11,19 +13,19 @@ library(clusterProfiler)
 library(optparse)
 
 option_list <- list(
-    make_option("--genie3_rdata", type = "character", default = "/data/work/N2/ppscRNA/seu_day-2.rds_hvg3000.rds_GENIE3.RData", help = "Path to GENIE3 RData file"),
-    make_option("--filtered_footprints_bed", type = "character", default = "/data/work/N2/10_footprints/filtered_footprints.bed", help = "Filtered footprints BED file"),
+    make_option("--genie3_rdata", type = "character", default = "/data/work/P0/ppscRNA/seu_day0.rds_hvg3000.rds_GENIE3.RData", help = "Path to GENIE3 RData file"),
+    make_option("--filtered_footprints_bed", type = "character", default = "/data/work/P0/10_footprints/filtered_footprints.bed", help = "Filtered footprints BED file"),
     make_option("--fastadir", type = "character", default = "~/rgtdata/tair10/genome_tair10_ensembl_release_51.fa", help = "FASTA directory"),
     make_option("--get_merged_fasta_R", type = "character", default = "/data/work/SCPipelines/all/get_merged_fasta.R", help = "get_merged_fasta R script"),
     make_option("--motifdir", type = "character", default = "/data/work/SCPipelines/Gar_individual_motif2/", help = "Motif directory"),
-    make_option("--peaks_bed", type = "character", default = "/data/work/N2/08_differential_peaks/peaks.bed", help = "Peaks BED file"),
+    make_option("--peaks_bed", type = "character", default = "/data/work/P0/08_differential_peaks/peaks.bed", help = "Peaks BED file"),
     make_option("--txdb_sqlite", type = "character", default = "/data/work/SCPipelines/gtf2txdb/txdb.sqlite", help = "TxDb sqlite file"),
     make_option("--annotation_R", type = "character", default = "/data/work/SCPipelines/all/annotation.R", help = "Annotation R script"),
     make_option("--n_workers", type = "integer", default = 8, help = "Number of workers"),
-    make_option("--tf_fdr", type = "integer", default = 2, help = "TF FDR"),
+    make_option("--tf_fdr", type = "integer", default = 1, help = "TF FDR"),
     make_option("--annodb", type = "character", default = "org.Ga.eg.db", help = "Annotation DB"),
-    make_option("--bams_txt", type = "character", default = "/data/work/N2/bams.txt", help = "BAMs txt file"),
-    make_option("--work_path", type = "character", default = "/data/work/N2/bulkATAC_scRNA", help = "Working path")
+    make_option("--bams_txt", type = "character", default = "/data/work/P0/bams.txt", help = "BAMs txt file"),
+    make_option("--work_path", type = "character", default = "/data/work/P0/bulkATAC_scRNA", help = "Working path")
 )
 
 opt <- parse_args(OptionParser(option_list = option_list))
@@ -167,12 +169,6 @@ system(shell_code,wait=TRUE)
 shell_code2 <- paste0('rm ',outputdir1,'Fimo*.sh')
 system(shell_code2,wait=TRUE)
 
-###Combine all footprints of motifs
-combined <- combine_footprints(outputdir)
-# peaks <- read.delim('differential_peaks.bed')
-peaks <- read.delim(peaks_bed,header = FALSE)
-# peaks <- read.delim(peaks_bed)
-# overlapped <- overlap_footprints_peaks(combined,peaks)
 
 # 定义最大尝试次数
 max_attempts <- 10
@@ -181,6 +177,12 @@ attempts <- 0
 while (attempts < max_attempts) {
   attempts <- attempts + 1
   tryCatch({
+    ###Combine all footprints of motifs
+    combined <- combine_footprints(outputdir)
+    # peaks <- read.delim('differential_peaks.bed')
+    peaks <- read.delim(peaks_bed,header = FALSE)
+    # peaks <- read.delim(peaks_bed)
+    # overlapped <- overlap_footprints_peaks(combined,peaks)
     overlapped <- overlap_footprints_peaks(combined, peaks)
     message("Success! The code ran without errors.")
     break  # 如果成功，退出循环
@@ -364,15 +366,22 @@ TFs_list <- network_analysis(filtered_regulatory,Kmeans_clustering_ENS,TFFDR1 = 
 # Part 3: Regulatory network analysis and visualization
 # filtered_regulatory_relationships <- filtered_regulatory # added by yd
 
+colors <- c("#e41a89", "#377EB8", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#00CED1")
 pdf("network.pdf", height=8, width=12)
 tryCatch({
-  plot_tf_network(TFs_list, layout = "grid")
+  n1 <- length(unique(Kmeans_clustering_ENS$KmeansGroup))
+  colors <- colors[1:n1]
+  tfgroup <- paste(unique(TFs_list$TF_network$TFGroup), collapse = ",")
+  targetgroup <- paste(unique(TFs_list$TF_network$TargetGroup), collapse = ",")
+  plot_tf_network(TFs_list, layout = "grid", group.cols = colors, arrow.size = 1, title.name= paste0("TFGroup(",tfgroup, ") & TargetGroup(", targetgroup, ")"), edge.color = c("#FDD1B0", "#B3B3B3"))
+  # The size of each vertex determine the significance of this transcription factor. Yellow edges are positive regulation, grey edges are negative regulation.
+  message(paste0("TFGroup(",tfgroup, ") & TargetGroup(", targetgroup, ")"))
 }, error = function(e) {
   message("Error in plotting: ", e$message)
 })
 dev.off()
 
-save(TFs_list, file = "TFs_list_.RData")
+save(TFs_list, file = "TFs_list.RData")
 save(filtered_regulatory, file = "filtered_regulatory.RData")
 save(potential_regulation, file = "potential_regulation.RData")
 save(Kmeans_clustering_ENS,file = "Kmeans_clustering_ENS.RData")
@@ -426,9 +435,79 @@ enrichment_GO_select <- na.omit(enrichment_GO_select)
 pdf('go.pdf', height = 8, width = 12)
 
 tryCatch({
-  plot_intramodular_network(TFs_list, enrichment_GO_select, layout = 'circle')
+  plot_intramodular_network(TFs_list, enrichment_GO_select, group.cols = colors, layout = 'circle')
 }, error = function(e) {
   message("Error in plotting: ", e$message)
 })
+
+dev.off()
+
+
+library(igraph)
+
+## 1. 取出边列表 -------------------------------------------------
+el <- TFs_list$FOSF_RegMTF_Cor_EnTFs[ , c("TF", "Target", "Weight", "Regulation")]
+colnames(el) <- c("from", "to", "weight", "regulation")
+
+## 2. 建图 -------------------------------------------------------
+g <- graph_from_data_frame(el, directed = TRUE)
+
+## 3. 给边加颜色：Positive = 绿色，Negative = 红色 --------------
+E(g)$color <- ifelse(E(g)$regulation == "Positive",
+                     "forestgreen", "firebrick")
+# # Positive = 浅黄色，Negative = 灰色
+# E(g)$color <- ifelse(E(g)$regulation == "Positive",
+#                      "#FDD1B0", "#B3B3B3")
+
+## 4. 给节点加类型属性（TF vs Target） --------------------------
+V(g)$type <- ifelse(V(g)$name %in% unique(el$from), "TF", "Target")
+
+## 5. 简单布局 & 绘图 -------------------------------------------
+set.seed(123)
+# layout <- layout_randomly(g) # Places the vertices completely randomly
+
+pdf('igraph.pdf')
+layout <- layout_in_circle(g) # Deterministic layout that places the vertices on a circle
+plot(g,
+     layout          = layout,
+     vertex.size     = 2,
+     vertex.label.cex= .2,
+     vertex.color    = ifelse(V(g)$type == "TF", "gold", "skyblue"),
+     vertex.frame.color = ifelse(V(g)$type == "TF", "gold", "skyblue"),
+     edge.width      = abs(E(g)$weight) * 100,   # 权重映射到线宽
+     edge.arrow.size = .1,
+     vertex.label    = V(g)$name,
+     vertex.label.dist = 0,
+     vertex.label.color = "black",
+     main = "TF-Target Regulatory Network(circle)")
+
+
+layout <- layout_as_tree(g, circular = TRUE) # Reingold-Tilford tree layout, useful for (almost) tree-like graphs
+plot(g,
+     layout          = layout,
+     vertex.size     = 2,
+     vertex.label.cex= .12,
+     vertex.color    = ifelse(V(g)$type == "TF", "gold", "skyblue"),
+     vertex.frame.color = ifelse(V(g)$type == "TF", "gold", "skyblue"),
+     edge.width      = abs(E(g)$weight) * 100,   # 权重映射到线宽
+     edge.arrow.size = .08,
+     vertex.label    = V(g)$name,
+     vertex.label.dist = 0,
+     vertex.label.color = "black",
+     main = "TF-Target Regulatory Network(tree)")
+
+layout <- layout_nicely(g)
+plot(g,
+     layout          = layout,
+     vertex.size     = 5,
+     vertex.label.cex= .4,
+     vertex.color    = ifelse(V(g)$type == "TF", "gold", "skyblue"),
+     vertex.frame.color = ifelse(V(g)$type == "TF", "gold", "skyblue"),
+     edge.width      = abs(E(g)$weight) * 200,   # 权重映射到线宽
+     edge.arrow.size = .1,
+     vertex.label    = V(g)$name,
+     vertex.label.dist = .1,
+     vertex.label.color = "black",
+     main = "TF-Target Regulatory Network(nicely)")
 
 dev.off()
