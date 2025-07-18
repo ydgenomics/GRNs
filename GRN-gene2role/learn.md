@@ -30,3 +30,9 @@ import multiprocessing
 import copy
 import gensim.models
 ```
+
+[CellOracle](https://www.nature.com/articles/s41586-022-05688-9) integrates scATAC-seq and scRNA-seq data, leveraging transcription factor (TF) binding motifs and co-expression information to infer GRNs, providing a more detailed and comprehensive understanding of gene regulatory mechanisms.
+
+network construction
+embedding generation
+downstream analysis
