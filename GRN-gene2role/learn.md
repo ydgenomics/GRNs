@@ -69,14 +69,18 @@ conda install conda-forge::r-ggraph -y
 conda install conda-forge::r-tidygraph -y
 conda install conda-forge::r-tidyverse -y
 conda install conda-forge::r-ggsignif -y
+conda install anaconda::ipykernel -y
+conda install conda-forge::r-optparse -y
+conda install conda-forge::r-ggvenndiagram -y
+conda install conda-forge::r-rpresto -y
+conda install conda-forge::r-devtools -y
 
 pip install futures
 pip install fastdtw
 pip install pandas
 pip install matplotlib
 pip install networkx
-pip install community
-
+pip install python-louvain
 ```
 ```R
 library(Seurat)
