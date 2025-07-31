@@ -80,7 +80,7 @@ pip install fastdtw
 pip install pandas
 pip install matplotlib
 pip install networkx
-pip install python-louvain
+pip install python-louvain # https://github.com/taynaud/python-louvain
 ```
 ```R
 library(Seurat)
