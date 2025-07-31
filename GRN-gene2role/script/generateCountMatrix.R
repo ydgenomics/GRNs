@@ -43,32 +43,34 @@ print(colnames(pbmc_orig@meta.data))
 if (cluster_value[1] == "all") {
 	# write count
 	pbmc_count <- as.data.frame(as.matrix(pbmc_orig@assays$RNA@counts))
-	pbmc <- CreateSeuratObject(pbmc_count)
+    pbmc_metadata <- pbmc_orig@meta.data
+	pbmc <- CreateSeuratObject(pbmc_count, meta.data=pbmc_metadata)
 	pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 10000)
 	pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = n_hvg)
 	# Generate count matrix for multiple GRN comparison.
 	pbmc_count <- pbmc_count[VariableFeatures(pbmc),] # Only keep high variable genes
 	fwrite(x = pbmc_count, file = "count.csv",row.names = TRUE) # 601 X 100
 	# write metadata
-	pbmc_metadata <- pbmc_orig@meta.data
 	write.table(pbmc_metadata, 
 			file = 'metadata.csv', 
 			sep = ',',
 			row.names = TRUE, 
 			quote = FALSE)
+    saveRDS(pbmc,"checked.rds")
 } else {
-	pbmc_CD4_orig <- subset(pbmc_orig, pbmc_orig@meta.data[[cluster_key]] %in% cluster_value)
+	Idents(pbmc_orig) <- pbmc_orig@meta.data[[cluster_key]]
+    pbmc_CD4_orig <- subset(pbmc_orig, idents =cluster_value)
+    pbmc_CD4_metadata <- pbmc_CD4_orig@meta.data
 	pbmc_CD4_count <- as.data.frame(as.matrix(pbmc_CD4_orig@assays$RNA@counts))
-
-	pbmc_CD4 <- CreateSeuratObject(pbmc_CD4_count)
+	pbmc_CD4 <- CreateSeuratObject(pbmc_CD4_count, meta.data=pbmc_CD4_metadata)
 	pbmc_CD4 <- NormalizeData(pbmc_CD4, normalization.method = "LogNormalize", scale.factor = 10000)
 	pbmc_CD4 <- FindVariableFeatures(pbmc_CD4, selection.method = "vst", nfeatures = n_hvg)
 	pbmc_CD4_count <- pbmc_CD4_count[VariableFeatures(pbmc_CD4),]
 	fwrite(x = pbmc_CD4_count, file = "count.csv",row.names = TRUE)
-	pbmc_CD4_metadata <- pbmc_CD4_orig@meta.data
 	write.table(pbmc_CD4_metadata, 
 							file = 'metadata.csv', 
 							sep = ',',
 							row.names = TRUE, 
 							quote = FALSE)
+    saveRDS(pbmc_CD4,"checked.rds")
 }
